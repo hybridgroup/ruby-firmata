@@ -29,6 +29,8 @@ module Firmata
     DIGITAL_MESSAGE_RANGE = 0x90..0x9F
     # Internal: Fixnum byte command for an analog I/O message
     ANALOG_MESSAGE = 0xE0
+    # Internal : Fixnum byte for extended analog
+    EXTENDED_ANALOG = 0x6F
     # Internal: Fixnum byte range for analog pins for analog 14-bit data format
     ANALOG_MESSAGE_RANGE = 0xE0..0xEF
     # Internal: Fixnum byte command to report analog pin

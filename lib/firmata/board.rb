@@ -124,8 +124,31 @@ module Firmata
     #
     # Returns nothing.
     def analog_write(pin, value)
+      l_byte       = value & 0x7F
+      n_byte       = (value >> 7) & 0x7F
+      write_params = [ANALOG_MESSAGE | pin, l_byte, n_byte]
+
       @pins[pin].value = value
-      write(ANALOG_MESSAGE | pin, value & 0x7F, (value >> 7) & 0x7F)
+
+      if pin > 15
+        if value > 0x00004000
+          write_param << (value >> 14) & 0x7F
+        end
+
+        if value > 0x00200000
+          write_params << (value >> 21) & 0x7F
+        end
+
+        if value > 0x10000000
+          write_param << (value >> 28) & 0x7F
+        end
+
+        write(START_SYSEX, EXTENDED_ANALOG, *write_params, END_SYSEX)
+      else
+        write(*write_params)
+      end
+
+
     end
 
     # Public: Write to a servo.
@@ -353,12 +376,12 @@ module Firmata
             supported_modes = 0
             n = 0
 
-            current_buffer.slice(2, current_buffer.length - 3).each do |byte|
-              if byte == 127
+            current_buffer.slice(2, current_buffer.length - 3).each do |b|
+              if b == 127
                 modes = []
                 # the pin modes
                 [ INPUT, OUTPUT, ANALOG, PWM, SERVO ].each do |mode|
-                   modes.push(mode) unless (supported_modes & (1 << mode)).zero?
+                  modes.push(mode) unless (supported_modes & (1 << mode)).zero?
                 end
 
                 @pins.push(Pin.new(modes, OUTPUT, 0))
@@ -378,15 +401,15 @@ module Firmata
           when ANALOG_MAPPING_RESPONSE
             pin_index = 0
 
-            current_buffer.slice(2, current_buffer.length - 3).each do |byte|
+            current_buffer.slice(2, current_buffer.length - 3).each do |b|
 
-              @pins[pin_index].analog_channel = byte
+              @pins[pin_index].analog_channel = b
 
-              @analog_pins.push(pin_index) unless byte == 127
+              @analog_pins.push(pin_index) unless b == 127
 
               pin_index += 1
             end
-  
+
             event :analog_mapping_query
 
           when PIN_STATE_RESPONSE
